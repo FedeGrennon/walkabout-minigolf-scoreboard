@@ -1,0 +1,56 @@
+table {
+    white-space: nowrap;
+}
+
+thead {
+    background-color: var(--principal);
+}
+
+tbody {
+    background-color: var(--light);
+}
+
+#titleTable th, #titleTable td {
+    text-align: start;
+}
+
+th, td {
+    text-align: center;
+    border: none;
+}
+
+table th[aria-selected="true"],
+table td[aria-selected="true"],
+table tr[aria-selected="true"] {
+    background-color: var(--dark) !important;
+    color: var(--light);
+    font-weight: bold;
+}
+
+#totalsTable tr {
+    background-color: var(--highlight);
+    color: var(--light);
+}
+
+#scoreTable td:first-child, #scoreTable th:first-child  {
+    border-left: none;
+}
+
+#finalTable tr:nth-child(even) {
+    background-color: var(--secondary);
+}
+
+#playersTable tr:first-child {
+    border-top: 1px solid #E1E1E1;
+}
+
+#playersTable tr {
+    background-color: white;
+    border-bottom: 1px solid #E1E1E1;
+}
+
+#playersTable tr:hover {
+    cursor: pointer;
+    background-color: #f8d9d9;
+    transition: background-color 0.5s ease;
+}

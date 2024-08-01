@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Walkabout Minigolf scoring</title>
+  <meta name="description" content="">
+  <meta name="author" content="Federico Grennon">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link rel="stylesheet" type="text/css" href="res/css/fonts.css">
+  <link rel="stylesheet" href="res/css/constants.css">
+  <link rel="stylesheet" href="res/css/micromodal.css">
+  <link rel="stylesheet" href="res/css/normalize.css">
+  <link rel="stylesheet" href="res/css/skeleton.css">
+  <link rel="stylesheet" href="res/css/toastify.min.css">
+  <link rel="stylesheet" href="res/css/utils.css">
+  <link rel="stylesheet" href="res/css/table.css">
+
+  <link rel="icon" type="image/png" href="res/images/favicon.png">
+</head>
+<body>
+  <div id="gameContainer" class="container hidden" style="padding-bottom: 3rem;">
+    <div class="row" style="margin-top: 3rem;">
+      <div class="column">
+        <h1 style="margin: 0;"><span id="currentPlayerTitle"></span>'s Turn</h1>
+        <h5>Hole <span id="holeText"></span> - Par <span id="parText"></span> (<span id="courseText"></span>)</h5>
+      </div>
+    </div>
+    <div class="row">
+      <div class="column">
+        <input id="numberOfShotsInput" type="number" class="u-max-full-width" min="1" step="1" placeholder="Number of shots" />
+        <button id="numberOfShotsButton">ENTER</button>
+      </div>
+    </div>
+    <div class="row" style="overflow-y: auto; max-height: 400px;">
+      <div class="column" style="display: flex;">
+        <table id="titleTable">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+        <div id="scrollTable" style="overflow-x: auto; overflow-y: hidden;">
+          <table id="scoreTable">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <table id="totalsTable">
+          <thead>
+            <tr></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal micromodal-slide" id="game-over-modal" aria-hidden="true">
+    <div class="modal__overlay" tabindex="-1">
+      <div class="modal__container u-full-width" role="dialog" aria-modal="true">
+        <header class="modal__header">
+          <h2 id="finishTitle"></h2>
+        </header>
+        <main class="modal__content">
+          <table id="finalTable" class="u-full-width">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </main>
+        <footer class="modal__footer">
+          <button id="playAgainButton" class="u-full-width">PLAY AGAIN</button>
+        </footer>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal micromodal-slide" id="init-game-modal" aria-hidden="true">
+    <div class="modal__overlay" tabindex="-1">
+      <div class="modal__container u-full-width" role="dialog" aria-modal="true">
+        <header class="modal__header">
+          <h3 id="finishTitle">Walkabout Minigolf Scoreboard</h3>
+        </header>
+
+        <div class="row">
+          <div class="six columns">
+            <label>Course</label>
+            <select id="coursesList" class="u-full-width"></select>
+          </div>
+          <div class="six columns">
+            <label>Difficulty</label>
+            <select id="difficultiesList" class="u-full-width">
+              <option value="easy">Easy</option>
+              <option value="hard">Hard</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div class="column">
+            <label>Hole Pars</label>
+            <input class="u-full-width" id="holeParsInput" type="text" placeholder="Hole Pars" style="margin: 0" />
+            <span style="font-size: 1.2rem; color: grey;">Separate by coma (,) without spaces between numbers. (Ej. 1,2,3,4)</span>
+          </div>
+        </div>
+        <div class="row" style="margin-top: 1rem">
+          <div class="column">
+            <label>Players</label>
+            <input id="playerNameInput" type="text" placeholder="player name" />
+            <button id="addPlayerButton">ADD</button>
+          </div>
+        </div>
+        <div class="row">
+          <div class="column">
+            <table id="playersTable" class="u-full-width">
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="row" style="margin-top: 1rem;">
+          <div class="column">
+            <button id="startButton" class="u-full-width">START</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/res/js/micromodal.min.js"></script>
+  <script src="/res/js/toastify.min.js"></script>
+  <script src="/res/js/courses.js"></script>
+  <script src="res/js/courses/20000-leagues-under-the-sea.js"></script>
+  <script src="res/js/courses/alfheim.js"></script>
+  <script src="res/js/courses/arizona-modern.js"></script>
+  <script src="res/js/courses/around-the-world-in-80-days.js"></script>
+  <script src="res/js/courses/atlantis.js"></script>
+  <script src="res/js/courses/bogeys-bonanza.js"></script>
+  <script src="res/js/courses/cherry-blossom.js"></script>
+  <script src="res/js/courses/el-dorado.js"></script>
+  <script src="res/js/courses/gardens-of-babylon.js"></script>
+  <script src="res/js/courses/ice-lair.js"></script>
+  <script src="res/js/courses/jim-hensons-labyrinth.js"></script>
+  <script src="res/js/courses/journey-to-the-center-of-the-earth.js"></script>
+  <script src="res/js/courses/laser-lair.js"></script>
+  <script src="res/js/courses/meow-wolf.js"></script>
+  <script src="res/js/courses/myst.js"></script>
+  <script src="res/js/courses/original-gothic.js"></script>
+  <script src="res/js/courses/quixote-valley.js"></script>
+  <script src="res/js/courses/seagull-stacks.js"></script>
+  <script src="res/js/courses/shangri-la.js"></script>
+  <script src="res/js/courses/sweetopia.js"></script>
+  <script src="res/js/courses/temple-at-zerzura.js"></script>
+  <script src="res/js/courses/tethys-station.js"></script>
+  <script src="res/js/courses/tourist-trap.js"></script>
+  <script src="res/js/courses/upside-town.js"></script>
+  <script src="res/js/courses/venice.js"></script>
+  <script src="res/js/courses/wallace-and-gromit.js"></script>
+  <script src="res/js/courses/widows-walkabout.js"></script>
+  <script src="/res/js/logic.js"></script>
+</body>
+</html>
