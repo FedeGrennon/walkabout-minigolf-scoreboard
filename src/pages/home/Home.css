@@ -1,0 +1,78 @@
+.enter-player-container {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 2rem;
+}
+
+.tip {
+    font-size: 1.3rem;
+    color: var(--grey);
+}
+
+.margin-none {
+    margin: 0;
+}
+
+.par-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 1rem;
+    margin-top: 1rem;
+    margin-bottom: 2rem;
+}
+
+.par-grid input {
+    width: 100%;
+    height: 40px;
+    text-align: center;
+    font-size: 18px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin: 0;
+}
+
+.player-list {
+    padding: 0;
+    margin: 0;
+    list-style-type: none;
+}
+
+.player-list .buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 2.5rem;
+    align-content: end;
+}
+
+.player-list li {
+    border: 1px solid lightgrey;
+    border-radius: 4px;
+    padding: 8px;
+    margin-bottom: 8px;
+    background-color: white;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 1rem;
+}
+
+.player-list p {
+    margin: 0;
+}
+
+.player-list svg {
+    font-size: 20px;
+}
+
+.player-list svg:hover {
+    cursor: pointer;
+}
+
+.player-empty {
+    font-size: 2.5rem;
+    text-align: center;
+    border: 1px solid lightcoral;
+    border-radius: 4px;
+    padding: 2rem 0;
+    color: lightcoral;
+    text-transform: uppercase;
+}
