@@ -1,46 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import './Home.css';
-import { courses } from '../../courses';
-import { Select } from '../../components/Select';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { toast } from 'react-toastify';
 import { useDispatch } from 'react-redux';
 import { AppDispatch } from '../../redux';
-import { setGame, IDifficult } from '../../redux/game-reducer';
+import { OrderMode, setGame } from '../../redux/game-reducer';
 import {
     faArrowDown,
     faArrowUp,
     faXmark,
 } from '@fortawesome/free-solid-svg-icons';
 
-const difficulties: IDifficult[] = [
-    { value: 'easy', label: 'Easy' },
-    { value: 'hard', label: 'Hard' },
-];
-
 const HOLES_QUANTITY = 18;
 
 export const Home = () => {
     const dispatch: AppDispatch = useDispatch();
-    const [course, setCourse] = useState(courses[0]);
-    const [difficulty, setDifficulty] = useState(difficulties[0]);
     const [pars, setPars] = useState<(number | string)[]>(
         Array(HOLES_QUANTITY).fill('')
     );
     const [playerName, setPlayerName] = useState('');
     const [players, setPlayers] = useState<string[]>([]);
-
-    useEffect(() => {
-        if (!course) return;
-        if (!difficulty) return;
-
-        const coursePars = course[difficulty.value];
-        const toSet = Array(HOLES_QUANTITY)
-            .fill('')
-            .map((_, index) => coursePars[index] ?? '');
-
-        setPars(toSet);
-    }, [course, difficulty]);
+    const [orderMode, setOrderMode] = useState<OrderMode>(OrderMode.BEST_SCORE);
 
     const showError = (message: string) => {
         toast(message, {
@@ -107,7 +87,8 @@ export const Home = () => {
         if (pars.some((par) => typeof par === 'number' && par > 99))
             return showError('All pars must be less than 100');
 
-        const playersMapped = players.map((playerName) => ({
+        const playersMapped = players.map((playerName, i) => ({
+            id: i,
             name: playerName,
             score: Array(HOLES_QUANTITY)
                 .fill(undefined)
@@ -126,48 +107,46 @@ export const Home = () => {
         dispatch(
             setGame({
                 currentHoleIndex: 0,
-                currentPlayerIndex: 0,
                 playersPlayedCount: 0,
                 players: playersMapped,
-                courseName: course.name,
+                courseName: 'Default course',
                 holes: holesMapped,
-                difficulty,
+                difficulty: {
+                    value: 'easy',
+                    label: 'Easy',
+                },
                 ended: false,
                 started: true,
+                orderInCurrentHole: playersMapped.map((_, i) => i),
+                orderMode: orderMode,
             })
         );
+    };
+
+    const nextInput = (index: number) => {
+        if (!pars[index]) return;
+
+        const input =
+            document.getElementById(`par-${index + 1}`) ??
+            document.getElementById('playerInput');
+
+        if (!input) return;
+
+        input.focus();
+    };
+
+    const prevInput = (index: number) => {
+        const input = document.getElementById(`par-${index - 1}`);
+
+        if (!input) return;
+
+        input.focus();
     };
 
     return (
         <div className="container">
             <h1 className="u-center">Walkabout Mini Golf Scoreboard</h1>
 
-            <div className="row">
-                <div className="six columns">
-                    <label>Course</label>
-
-                    <Select
-                        className="u-full-width"
-                        options={courses}
-                        defaultValue={0}
-                        placeholder="Select course"
-                        mapOptionToLabel={(option) => option.name}
-                        onSelectChange={setCourse}
-                    />
-                </div>
-                <div className="six columns">
-                    <label>Difficulty</label>
-
-                    <Select
-                        className="u-full-width"
-                        options={difficulties}
-                        defaultValue={difficulty.value}
-                        placeholder="Select a difficult"
-                        mapOptionToLabel={(option) => option.label}
-                        onSelectChange={setDifficulty}
-                    />
-                </div>
-            </div>
             <div className="row">
                 <div className="column">
                     <label>Hole Pars</label>
@@ -179,10 +158,21 @@ export const Home = () => {
 
                                 <input
                                     type="number"
+                                    id={`par-${index}`}
                                     placeholder={`#${index + 1}`}
                                     maxLength={2}
                                     min={1}
                                     value={pars[index] ?? ''}
+                                    onKeyDown={(e) => {
+                                        if (e.code === 'Enter') {
+                                            e.preventDefault();
+                                            nextInput(index);
+                                        } else if (e.code === 'Backspace') {
+                                            if (pars[index]) return;
+                                            e.preventDefault();
+                                            prevInput(index);
+                                        }
+                                    }}
                                     onChange={(e) =>
                                         changePar(index, e.target.value)
                                     }
@@ -198,11 +188,32 @@ export const Home = () => {
             </div>
             <div className="row">
                 <div className="column">
+                    <label>Order mode</label>
+
+                    <select
+                        className="u-full-width"
+                        value={orderMode}
+                        onChange={(e) =>
+                            setOrderMode(e.target.value as OrderMode)
+                        }
+                    >
+                        <option value={OrderMode.LAST_FIRST}>
+                            Last is first
+                        </option>
+                        <option value={OrderMode.BEST_SCORE}>
+                            By best score
+                        </option>
+                    </select>
+                </div>
+            </div>
+            <div className="row">
+                <div className="column">
                     <label>Players</label>
 
                     <div className="enter-player-container">
                         <input
                             maxLength={12}
+                            id="playerInput"
                             type="text"
                             placeholder="player name"
                             value={playerName}

@@ -3,7 +3,13 @@ import './Game.css';
 import { useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '../../redux';
 import { useDispatch } from 'react-redux';
-import { clearGame, setGame, IPlayer } from '../../redux/game-reducer';
+import {
+    clearGame,
+    setGame,
+    IPlayer,
+    OrderMode,
+    IGame,
+} from '../../redux/game-reducer';
 import { toast } from 'react-toastify';
 
 export const Game = () => {
@@ -26,7 +32,7 @@ export const Game = () => {
 
     const currentHoleInfo = () => {
         const hole = game.holes[game.currentHoleIndex];
-        return `Hole ${hole.number} - Par ${hole.par} (${game.courseName} - ${game.difficulty?.label})`;
+        return `Hole ${hole.number} - Par ${hole.par}`;
     };
 
     const getParsTotal = () => {
@@ -47,8 +53,15 @@ export const Game = () => {
         return `${calculated > 0 ? '+' : ''}${calculated === 0 ? 'E' : calculated} (${player.total})`;
     };
 
+    const getCurrentPlayer = () => {
+        const id = game.orderInCurrentHole[game.playersPlayedCount];
+        return (
+            game.players.find((player) => player.id === id) ?? game.players[0]
+        );
+    };
+
     const isPlayerSelected = (player: IPlayer) =>
-        player.name === game.players[game.currentPlayerIndex].name;
+        player.id === game.orderInCurrentHole[game.playersPlayedCount];
 
     const isHoleSelected = (number: number) =>
         number === game.holes[game.currentHoleIndex].number;
@@ -60,11 +73,12 @@ export const Game = () => {
         if (isNaN(amount)) return showError('Indicate the number of shots');
         if (amount <= 0) return showError('The number must be greater than 0');
         if (amount > 99) return showError('The number must be less than 99');
-
         const par = game.holes[game.currentHoleIndex].par;
+        const currentPlayerId =
+            game.orderInCurrentHole[game.playersPlayedCount];
 
-        const updatedPlayers = game.players.map((player, index) => {
-            if (game.currentPlayerIndex !== index) return player;
+        const updatedPlayers = game.players.map((player) => {
+            if (currentPlayerId !== player.id) return player;
 
             return {
                 ...player,
@@ -80,39 +94,79 @@ export const Game = () => {
             };
         });
 
-        let ended = false;
-        let currentPlayerIndex = game.currentPlayerIndex;
-        let playersPlayedCount = game.playersPlayedCount + 1;
-        let currentHoleIndex = game.currentHoleIndex;
+        const gameMapped = nextTurn({ ...game, players: updatedPlayers });
 
-        if (game.players.length === playersPlayedCount) {
-            if (game.currentHoleIndex === game.holes.length - 1) ended = true;
+        dispatch(setGame(gameMapped));
+    };
+
+    const sortOrderByScore = (
+        aPlayer: IPlayer,
+        bPlayer: IPlayer,
+        holeIndex: number
+    ): number => {
+        if (holeIndex < 0) {
+            if (aPlayer.total === bPlayer.total) return Math.random();
+            return aPlayer.total - bPlayer.total;
+        }
+
+        const aValue = aPlayer.score[holeIndex].value ?? 0;
+        const bValue = bPlayer.score[holeIndex].value ?? 0;
+
+        if (aValue !== bValue) return aValue - bValue;
+
+        return sortOrderByScore(aPlayer, bPlayer, holeIndex - 1);
+    };
+
+    const calculateOrder = (currentGame: IGame) => {
+        if (currentGame.orderMode === OrderMode.BEST_SCORE) {
+            const holeIndex = currentGame.currentHoleIndex;
+            return [...currentGame.players]
+                .sort((a, b) => sortOrderByScore(a, b, holeIndex))
+                .map((player) => player.id);
+        }
+
+        if (currentGame.orderMode === OrderMode.LAST_FIRST) {
+            const currentOrder = [...currentGame.orderInCurrentHole];
+            const lastElement = currentOrder.pop();
+            if (lastElement !== undefined) currentOrder.unshift(lastElement);
+            return currentOrder;
+        }
+
+        return currentGame.orderInCurrentHole;
+    };
+
+    const nextTurn = (currentGame: IGame, passTurn = true) => {
+        let ended = false;
+        let playersPlayedCount =
+            currentGame.playersPlayedCount + (passTurn ? 1 : 0);
+        let currentHoleIndex = currentGame.currentHoleIndex;
+        let orderInCurrentHole = currentGame.orderInCurrentHole;
+
+        if (currentGame.players.length === playersPlayedCount) {
+            if (currentGame.currentHoleIndex === currentGame.holes.length - 1)
+                ended = true;
 
             if (!ended) {
                 currentHoleIndex = currentHoleIndex + 1;
+                orderInCurrentHole = calculateOrder(currentGame);
                 playersPlayedCount = 0;
             }
-        } else {
-            currentPlayerIndex =
-                game.currentPlayerIndex === game.players.length - 1
-                    ? 0
-                    : currentPlayerIndex + 1;
         }
 
         setScoreText('');
 
-        dispatch(
-            setGame({
-                players: updatedPlayers,
-                playersPlayedCount,
-                currentPlayerIndex,
-                ended,
-                currentHoleIndex,
-            })
-        );
+        currentGame.playersPlayedCount = playersPlayedCount;
+        currentGame.ended = ended;
+        currentGame.currentHoleIndex = currentHoleIndex;
+        currentGame.orderInCurrentHole = orderInCurrentHole;
+        return currentGame;
     };
 
-    const changeToEditScore = (playerIndex: number, scoreIndex: number) => {
+    const changeToEditScore = (
+        playerIndex: number,
+        scoreIndex: number,
+        buttonId: string
+    ) => {
         const hasOneEditing = game.players.some((player) =>
             player.score.some((score) => score.isEditing)
         );
@@ -147,6 +201,8 @@ export const Game = () => {
                 players: updatedPlayers,
             })
         );
+
+        document.getElementById(buttonId)?.focus();
     };
 
     const editScore = (playerIndex: number, scoreIndex: number) => {
@@ -272,11 +328,71 @@ export const Game = () => {
         );
     };
 
+    const deleteUser = (player: IPlayer) => {
+        if (toastOpen) return;
+
+        const id = toast(
+            <div className="close-container">
+                <p>Are you sure you want to delete the user {player.name}</p>
+
+                <div className="close-buttons-container">
+                    <button onClick={() => toast.dismiss(id)}>NO</button>
+                    <button
+                        onClick={() => {
+                            setToastOpen(false);
+                            toast.dismiss(id);
+                            const players = game.players.filter(
+                                (p) => p.id !== player.id
+                            );
+                            const orders = game.orderInCurrentHole.filter(
+                                (id) => player.id !== id
+                            );
+                            const playersPlayedCount = game.players.reduce(
+                                (acc, curr) =>
+                                    acc +
+                                    (curr.score[game.currentHoleIndex].value !==
+                                    null
+                                        ? 1
+                                        : 0),
+                                0
+                            );
+
+                            const gameMapped = {
+                                ...game,
+                                players,
+                                orderInCurrentHole: orders,
+                                playersPlayedCount,
+                            };
+
+                            if (players.length === 0) dispatch(clearGame());
+
+                            const g = nextTurn(gameMapped, false);
+
+                            dispatch(setGame(g));
+                        }}
+                    >
+                        YES
+                    </button>
+                </div>
+            </div>,
+            {
+                type: 'warning',
+                theme: 'light',
+                autoClose: false,
+                position: 'top-center',
+                hideProgressBar: true,
+                closeOnClick: false,
+                onClose: () => setToastOpen(false),
+                onOpen: () => setToastOpen(true),
+            }
+        );
+    };
+
     return (
         <div className="container hidden">
             <div className="row margin-none">
                 <div className="column title-container">
-                    <h1>{game.players[game.currentPlayerIndex].name}'s Turn</h1>
+                    <h1>{getCurrentPlayer().name}'s Turn</h1>
                     <button
                         className="u-pull-right finish-game-button"
                         onClick={finishGame}
@@ -322,8 +438,11 @@ export const Game = () => {
                         <tbody>
                             {game.players.map((player) => (
                                 <tr
+                                    title="Delete user"
+                                    className="delete"
                                     key={player.name}
                                     aria-selected={isPlayerSelected(player)}
+                                    onClick={() => deleteUser(player)}
                                 >
                                     <td>{player.name}</td>
                                 </tr>
@@ -385,12 +504,14 @@ export const Game = () => {
                                                     if (s.value !== null)
                                                         changeToEditScore(
                                                             index,
-                                                            i
+                                                            i,
+                                                            `editInput${index}-${i}`
                                                         );
                                                 }}
                                             >
                                                 {s.isEditing ? (
                                                     <input
+                                                        id={`editInput${index}-${i}`}
                                                         type="number"
                                                         min={1}
                                                         step={1}
