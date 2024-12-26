@@ -1,3 +1,11 @@
+.margin-none {
+    margin: 0;
+}
+
+.margin-bottom {
+    margin-bottom: 2rem;
+}
+
 .enter-button {
     margin-left: 1.5rem;
     margin-bottom: 0;
@@ -27,6 +35,11 @@
 
 .finish-game-button {
     padding: 0 1.5rem;
+}
+
+.icon-button {
+    padding: 0 1.5rem;
+    font-size: 2rem;
 }
 
 .tables-container {
@@ -127,4 +140,18 @@ table tr[aria-selected='true'] {
     background-color: var(--delete) !important;
     color: var(--black) !important;
     cursor: pointer;
+}
+
+.adding-bar {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.config-table td:first-child, th:first-child {
+    text-align: left;
+}
+
+.config-table td:last-child {
+    width: 100px;
 }

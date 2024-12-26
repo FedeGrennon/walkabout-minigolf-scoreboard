@@ -11,16 +11,23 @@ import {
     IGame,
 } from '../../redux/game-reducer';
 import { toast } from 'react-toastify';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+    faGear,
+    faXmark,
+    faArrowLeft,
+} from '@fortawesome/free-solid-svg-icons';
 
 export const Game = () => {
     const dispatch: AppDispatch = useDispatch();
     const containerScoreTableRef = useRef<HTMLDivElement>(null);
     const scoreTableRef = useRef<HTMLTableElement>(null);
+    const inputEditRef = useRef<HTMLInputElement>(null);
 
     const game = useSelector((state: RootState) => state.game);
     const [toastOpen, setToastOpen] = useState(false);
     const [scoreText, setScoreText] = useState('');
-    const [scoreEditText, setScoreEditText] = useState('');
+    const [configOpened, setConfigOpened] = useState(false);
 
     useEffect(() => {
         cleanEdit();
@@ -162,51 +169,8 @@ export const Game = () => {
         return currentGame;
     };
 
-    const changeToEditScore = (
-        playerIndex: number,
-        scoreIndex: number,
-        buttonId: string
-    ) => {
-        const hasOneEditing = game.players.some((player) =>
-            player.score.some((score) => score.isEditing)
-        );
-        if (hasOneEditing) return;
-
-        const updatedPlayers = game.players.map((player, index) => {
-            if (playerIndex !== index) return player;
-
-            return {
-                ...player,
-                score: player.score.map((score, i) => {
-                    if (i !== scoreIndex) return score;
-
-                    return {
-                        ...score,
-                        isEditing: true,
-                    };
-                }),
-            };
-        });
-
-        const par = game.holes[scoreIndex].par;
-        const prevScore =
-            game.players[playerIndex].score[scoreIndex].value ?? 0;
-
-        const shots = prevScore + par;
-
-        setScoreEditText(shots.toString());
-
-        dispatch(
-            setGame({
-                players: updatedPlayers,
-            })
-        );
-
-        document.getElementById(buttonId)?.focus();
-    };
-
     const editScore = (playerIndex: number, scoreIndex: number) => {
-        const amount = parseInt(scoreEditText);
+        const amount = parseInt(inputEditRef.current?.value ?? '');
 
         if (isNaN(amount)) return showError('Indicate the number of shots');
         if (amount <= 0) return showError('The number must be greater than 0');
@@ -241,8 +205,6 @@ export const Game = () => {
                 players: updatedPlayers,
             })
         );
-
-        setScoreEditText('');
     };
 
     const cleanEdit = () => {
@@ -388,190 +350,327 @@ export const Game = () => {
         );
     };
 
-    return (
-        <div className="container hidden">
-            <div className="row margin-none">
-                <div className="column title-container">
-                    <h1>{getCurrentPlayer().name}'s Turn</h1>
+    const openEditScore = (playerIndex: number, scoreIndex: number) => {
+        if (toastOpen) return;
+
+        const par = game.holes[scoreIndex].par;
+        const prevScore =
+            game.players[playerIndex].score[scoreIndex].value ?? 0;
+
+        const shots = prevScore + par;
+
+        inputEditRef.current?.focus();
+
+        const id = toast(
+            <div className="close-container">
+                <input
+                    ref={inputEditRef}
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    step={1}
+                    max={99}
+                    maxLength={2}
+                    placeholder={shots.toString()}
+                    className="u-full-width margin-bottom"
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                            editScore(playerIndex, scoreIndex);
+                            setToastOpen(false);
+                            toast.dismiss(id);
+                        }
+                    }}
+                />
+
+                <div
+                    className="u-full-width"
+                    style={{ display: 'flex', gap: '1rem' }}
+                >
                     <button
-                        className="u-pull-right finish-game-button"
-                        onClick={finishGame}
+                        className="u-full-width"
+                        onClick={() => {
+                            setToastOpen(false);
+                            toast.dismiss(id);
+                        }}
                     >
-                        END GAME
+                        CANCELAR
+                    </button>
+
+                    <button
+                        className="u-full-width"
+                        onClick={() => {
+                            editScore(playerIndex, scoreIndex);
+                            setToastOpen(false);
+                            toast.dismiss(id);
+                        }}
+                    >
+                        AGREGAR
                     </button>
                 </div>
-            </div>
-            <div className="row margin-none">
-                <div className="column">
-                    <h5>{currentHoleInfo()}</h5>
-                </div>
-            </div>
-            <div className="row margin-none">
-                <div className="column">
-                    <input
-                        type="number"
-                        min={1}
-                        step={1}
-                        max={99}
-                        maxLength={2}
-                        placeholder="Number of shots"
-                        className="u-full-width"
-                        value={scoreText}
-                        onChange={(e) => setScoreText(e.target.value)}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter') addScore();
-                        }}
-                    />
-                </div>
-            </div>
-            <div className="row">
-                <div className="column tables-container">
-                    <table className="titles-table margin-none">
-                        <thead>
-                            <tr>
-                                <th>Hole</th>
-                            </tr>
-                            <tr>
-                                <th>Par</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {game.players.map((player) => (
-                                <tr
-                                    title="Delete user"
-                                    className="delete"
-                                    key={player.name}
-                                    aria-selected={isPlayerSelected(player)}
-                                    onClick={() => deleteUser(player)}
-                                >
-                                    <td>{player.name}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                    <div
-                        ref={containerScoreTableRef}
-                        className="u-full-width score-table-container"
-                    >
-                        <table
-                            ref={scoreTableRef}
-                            className="score-table u-full-width margin-none"
-                        >
-                            <thead>
-                                <tr>
-                                    {game.holes.map((hole) => (
-                                        <th
-                                            key={hole.number}
-                                            aria-selected={isHoleSelected(
-                                                hole.number
-                                            )}
-                                        >
-                                            #{hole.number}
-                                        </th>
-                                    ))}
-                                </tr>
-                                <tr>
-                                    {game.holes.map((hole) => (
-                                        <th
-                                            key={hole.number}
-                                            aria-selected={isHoleSelected(
-                                                hole.number
-                                            )}
-                                        >
-                                            {hole.par}
-                                        </th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {game.players.map((player, index) => (
-                                    <tr
-                                        key={player.name}
-                                        aria-selected={isPlayerSelected(player)}
+            </div>,
+            {
+                type: 'default',
+                theme: 'light',
+                autoClose: false,
+                position: 'top-center',
+                hideProgressBar: true,
+                closeOnClick: false,
+                closeButton: false,
+                onClose: () => setToastOpen(false),
+                onOpen: () => setToastOpen(true),
+            }
+        );
+    };
+
+    const toggleConfig = () => {
+        setConfigOpened((config) => !config);
+    };
+
+    return (
+        <div className="container hidden">
+            {configOpened && (
+                <div className="row margin-none">
+                    <div className="column">
+                        <div className="row margin-none">
+                            <div className="column title-container">
+                                <div className="adding-bar margin-bottom">
+                                    <button
+                                        className="icon-button margin-none"
+                                        onClick={toggleConfig}
                                     >
-                                        {player.score.map((s, i) => (
-                                            <td
-                                                key={i}
-                                                aria-selected={isHoleSelected(
-                                                    i + 1
-                                                )}
-                                                className={
-                                                    s.value !== null
-                                                        ? 'editable'
-                                                        : ''
-                                                }
-                                                onClick={() => {
-                                                    if (s.value !== null)
-                                                        changeToEditScore(
-                                                            index,
-                                                            i,
-                                                            `editInput${index}-${i}`
-                                                        );
-                                                }}
-                                            >
-                                                {s.isEditing ? (
-                                                    <input
-                                                        id={`editInput${index}-${i}`}
-                                                        type="number"
-                                                        min={1}
-                                                        step={1}
-                                                        max={99}
-                                                        maxLength={2}
-                                                        className="u-full-width score-edit-input"
-                                                        value={scoreEditText}
-                                                        onChange={(e) =>
-                                                            setScoreEditText(
-                                                                e.target.value
-                                                            )
-                                                        }
-                                                        onKeyDown={(e) => {
-                                                            if (
-                                                                e.key ===
-                                                                'Enter'
-                                                            )
-                                                                editScore(
-                                                                    index,
-                                                                    i
-                                                                );
-                                                            else if (
-                                                                e.key ===
-                                                                'Escape'
-                                                            )
-                                                                cleanEdit();
-                                                        }}
+                                        <FontAwesomeIcon icon={faArrowLeft} />
+                                    </button>
+
+                                    <h1 className="margin-none">
+                                        Configurations
+                                    </h1>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="row margin-none">
+                            <div className="column">
+                                <table className="config-table u-full-width">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {game.players.map((player) => (
+                                            <tr key={`config-${player.name}`}>
+                                                <td>{player.name}</td>
+                                                <td
+                                                    title="Delete User"
+                                                    className="delete"
+                                                    onClick={() =>
+                                                        deleteUser(player)
+                                                    }
+                                                >
+                                                    <FontAwesomeIcon
+                                                        icon={faXmark}
                                                     />
-                                                ) : (
-                                                    getPlayerScoreText(s.value)
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div className="row margin-none">
+                            <div className="column">
+                                <button
+                                    className="finish-game-button u-full-width"
+                                    onClick={finishGame}
+                                >
+                                    End Game
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {!configOpened && (
+                <>
+                    <div className="row margin-none">
+                        <div className="column title-container">
+                            <h1>{getCurrentPlayer().name}'s Turn</h1>
+                            <button
+                                className="u-pull-right icon-button"
+                                onClick={toggleConfig}
+                            >
+                                <FontAwesomeIcon icon={faGear} />
+                            </button>
+                        </div>
+                    </div>
+                    <div className="row margin-none">
+                        <div className="column">
+                            <h5>{currentHoleInfo()}</h5>
+                        </div>
+                    </div>
+                    <div className="row margin-none">
+                        <div className="column">
+                            <div className="adding-bar">
+                                <input
+                                    type="number"
+                                    inputMode="numeric"
+                                    min={1}
+                                    step={1}
+                                    max={99}
+                                    maxLength={2}
+                                    placeholder="Number of shots"
+                                    className="u-full-width"
+                                    value={scoreText}
+                                    onChange={(e) =>
+                                        setScoreText(e.target.value)
+                                    }
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') addScore();
+                                    }}
+                                />
+
+                                <button onClick={addScore}>AGREGAR</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="row">
+                        <div className="column tables-container">
+                            <table className="titles-table margin-none">
+                                <thead>
+                                    <tr>
+                                        <th>Hole</th>
+                                    </tr>
+                                    <tr>
+                                        <th>Par</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {game.players.map((player) => (
+                                        <tr
+                                            key={player.name}
+                                            aria-selected={isPlayerSelected(
+                                                player
+                                            )}
+                                        >
+                                            <td>{player.name}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                            <div
+                                ref={containerScoreTableRef}
+                                className="u-full-width score-table-container"
+                            >
+                                <table
+                                    ref={scoreTableRef}
+                                    className="score-table u-full-width margin-none"
+                                >
+                                    <thead>
+                                        <tr>
+                                            {game.holes.map((hole) => (
+                                                <th
+                                                    key={hole.number}
+                                                    aria-selected={isHoleSelected(
+                                                        hole.number
+                                                    )}
+                                                >
+                                                    #{hole.number}
+                                                </th>
+                                            ))}
+                                        </tr>
+                                        <tr>
+                                            {game.holes.map((hole) => (
+                                                <th
+                                                    key={hole.number}
+                                                    aria-selected={isHoleSelected(
+                                                        hole.number
+                                                    )}
+                                                >
+                                                    {hole.par}
+                                                </th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {game.players.map(
+                                            (player, playerIndex) => (
+                                                <tr
+                                                    key={player.name}
+                                                    aria-selected={isPlayerSelected(
+                                                        player
+                                                    )}
+                                                >
+                                                    {player.score.map(
+                                                        (s, scoreIndex) => (
+                                                            <td
+                                                                key={scoreIndex}
+                                                                aria-selected={isHoleSelected(
+                                                                    scoreIndex +
+                                                                        1
+                                                                )}
+                                                                className={
+                                                                    s.value !==
+                                                                    null
+                                                                        ? 'editable'
+                                                                        : ''
+                                                                }
+                                                                onClick={() => {
+                                                                    if (
+                                                                        s.value ===
+                                                                        null
+                                                                    )
+                                                                        return;
+
+                                                                    openEditScore(
+                                                                        playerIndex,
+                                                                        scoreIndex
+                                                                    );
+                                                                }}
+                                                            >
+                                                                {getPlayerScoreText(
+                                                                    s.value
+                                                                )}
+                                                            </td>
+                                                        )
+                                                    )}
+                                                </tr>
+                                            )
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <table className="totals-table margin-none">
+                                <thead>
+                                    <tr>
+                                        <th>Total</th>
+                                    </tr>
+                                    <tr>
+                                        <th>{getParsTotal()}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {game.players.map((player) => (
+                                        <tr
+                                            key={player.name}
+                                            aria-selected={isPlayerSelected(
+                                                player
+                                            )}
+                                        >
+                                            <td>
+                                                {getTotalPlayerScoreText(
+                                                    player
                                                 )}
                                             </td>
-                                        ))}
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                    <table className="totals-table margin-none">
-                        <thead>
-                            <tr>
-                                <th>Total</th>
-                            </tr>
-                            <tr>
-                                <th>{getParsTotal()}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {game.players.map((player) => (
-                                <tr
-                                    key={player.name}
-                                    aria-selected={isPlayerSelected(player)}
-                                >
-                                    <td>{getTotalPlayerScoreText(player)}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                </>
+            )}
         </div>
     );
 };

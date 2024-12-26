@@ -20,7 +20,7 @@ export const Home = () => {
     );
     const [playerName, setPlayerName] = useState('');
     const [players, setPlayers] = useState<string[]>([]);
-    const [orderMode, setOrderMode] = useState<OrderMode>(OrderMode.BEST_SCORE);
+    const [orderMode, setOrderMode] = useState<OrderMode>(OrderMode.LAST_FIRST);
 
     const showError = (message: string) => {
         toast(message, {
@@ -158,6 +158,7 @@ export const Home = () => {
 
                                 <input
                                     type="number"
+                                    inputMode="numeric"
                                     id={`par-${index}`}
                                     placeholder={`#${index + 1}`}
                                     maxLength={2}
